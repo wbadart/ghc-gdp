@@ -5,17 +5,9 @@ module MyLib
 ) where
 
 import qualified GHC.Plugins
+import GHC.Utils.Outputable (($$))
 import GHC.TcPlugin.API
-  ( Ct
-  , TcPlugin(..)
-  , TcPluginM
-  , TcPluginRewriter
-  , TcPluginSolveResult
-  , TcPluginStage(..)
-  , TyCon
-  , UniqFM
-  , mkTcPlugin
-  )
+
 
 plugin :: GHC.Plugins.Plugin
 plugin = GHC.Plugins.defaultPlugin
@@ -31,7 +23,9 @@ tcPlugin _args = TcPlugin
   }
 
 solve :: [Ct] -> [Ct] -> TcPluginM 'Solve TcPluginSolveResult
-solve _givens _wanteds = undefined
+solve givens wanteds = do
+  tcPluginTrace "SOLVING" (ppr givens $$ ppr wanteds)
+  pure $ TcPluginOk [] []
 
 rewrite :: UniqFM TyCon TcPluginRewriter
-rewrite = undefined
+rewrite = emptyUFM
