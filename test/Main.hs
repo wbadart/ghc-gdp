@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fplugin=GHC.GDP #-}
+
 module Main (main) where
 
 main :: IO ()

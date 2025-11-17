@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 
-module MyLib
+module GHC.GDP
 ( plugin
 ) where
 
