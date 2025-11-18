@@ -1,4 +1,6 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TupleSections #-}
 
 module GHC.GDP (plugin) where
@@ -9,6 +11,9 @@ import GHC.TcPlugin.API
 import GHC.Plugins (($$), (<+>))
 import qualified GHC.Plugins as GHC
 
+import Logic.Propositional (And, Or, Not)
+
+
 plugin :: GHC.Plugin
 plugin = GHC.defaultPlugin
   { GHC.tcPlugin = Just . mkTcPlugin . tcPlugin
@@ -16,26 +21,44 @@ plugin = GHC.defaultPlugin
   }
 
 
--- ==========
-
-type State = ()
-
-
 tcPlugin :: [String] -> GHC.TcPlugin.API.TcPlugin
 tcPlugin _args = TcPlugin
   { tcPluginSolve = solve
   , tcPluginRewrite = rewrite
-  , tcPluginInit = pure ()
+  , tcPluginInit = initPlugin
   , tcPluginStop = \_ -> pure ()
   }
+
+
+data State = State
+  { gdpAnd :: TyCon
+  , gdpOr  :: TyCon
+  , gdpNot :: TyCon
+  }
+
+
+instance Outputable State where
+  ppr State{gdpAnd, gdpOr, gdpNot} =
+    GHC.empty
+    $$ (GHC.text "AND:" <+> ppr gdpAnd)
+    $$ (GHC.text "OR: " <+> ppr gdpOr)
+    $$ (GHC.text "NOT:" <+> ppr gdpNot)
+
+
+initPlugin :: TcPluginM 'Init State
+initPlugin = State
+  <$> (lookupTHName ''And >>= tcLookupTyCon)
+  <*> (lookupTHName ''Or  >>= tcLookupTyCon)
+  <*> (lookupTHName ''Not >>= tcLookupTyCon)
 
 
 -- Constraint solving
 -- ==========
 
 solve :: State -> [Ct] -> [Ct] -> TcPluginM 'Solve TcPluginSolveResult
-solve _ givens wanteds = do
+solve state givens wanteds = do
   tcPluginTrace "----- SOLVING -----" GHC.empty
+  tcPluginTrace "State:" (ppr state)
   tcPluginTrace "----- GIVENS  -----" (GHC.text "\n" <+> ppr givens)
   tcPluginTrace "----- WANTEDS -----" $
     foldl' (\doc ct -> doc $$ (pprCt ct $$ GHC.text "----------")) GHC.empty wanteds
