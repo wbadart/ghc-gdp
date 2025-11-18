@@ -9,7 +9,6 @@ import GHC.TcPlugin.API
 import GHC.Plugins (($$), (<+>))
 import qualified GHC.Plugins as GHC
 
-
 plugin :: GHC.Plugin
 plugin = GHC.defaultPlugin
   { GHC.tcPlugin = Just . mkTcPlugin . tcPlugin
@@ -33,7 +32,6 @@ tcPlugin _args = TcPlugin
 
 -- Constraint solving
 -- ==========
-
 
 solve :: State -> [Ct] -> [Ct] -> TcPluginM 'Solve TcPluginSolveResult
 solve _ givens wanteds = do
