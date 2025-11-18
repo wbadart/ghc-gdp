@@ -36,10 +36,12 @@ solve _ givens wanteds = do
   tcPluginTrace "----- SOLVING -----" GHC.empty
   tcPluginTrace "----- GIVENS  -----" (ppr givens)
   tcPluginTrace "----- WANTEDS -----" (ppr wanteds)
-  tcPluginTrace "Wanted detail:" (pprCt $ head wanteds)
+
+  let wanted = head wanteds
+  tcPluginTrace "Wanted detail:" (pprCt wanted)
   let
     solved =
-      [ (mkPluginUnivEvTerm "GDP TERM" Nominal [] (error "lhs") (error "rhs"), head wanteds)
+      [ (uncurry (mkPluginUnivEvTerm "GDP TERM" Nominal []) (unsafeOperands wanted), wanted)
       ]
     new = []
   pure $ TcPluginOk solved new
@@ -54,6 +56,11 @@ pprCt ct = case classifyPredType (ctPred ct) of
     $$ (GHC.text "rhs " <+> ppr rhs)
   IrredPred{} -> GHC.text "IrredPred"
   ForAllPred{} -> GHC.text "ForAllPred"
+
+unsafeOperands :: Ct -> (Type, Type)
+unsafeOperands ct = case classifyPredType (ctPred ct) of
+  EqPred NomEq lhs rhs -> (lhs, rhs)
+  _ -> error "not a nominal equality"
 
 
 -- Type family rewriting
