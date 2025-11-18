@@ -17,17 +17,26 @@ main :: IO ()
 main = do
   print $ needsThat proof1
   print $ needsThat proof2
+  print $ needsThat notProof1
+  print $ needsThat notProof2
 
 -- ==========
 
 data This
 data That
+data TheOther
 
 proof1 :: Proof (This && That)
 proof1 = axiom
 
 proof2 :: Proof (That && This)
 proof2 = axiom
+
+notProof1 :: Proof TheOther
+notProof1 = axiom
+
+notProof2 :: Proof (This || That)
+notProof2 = axiom
 
 needsThat :: Proof That -> ()
 needsThat _ = ()

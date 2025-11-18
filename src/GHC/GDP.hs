@@ -5,6 +5,7 @@
 
 module GHC.GDP (plugin) where
 
+import Data.Functor ((<&>))
 import Data.List (foldl')
 import Data.Maybe (mapMaybe)
 import GHC.TcPlugin.API
@@ -70,12 +71,12 @@ solve state givens wanteds = do
 
 solveGDP :: Ct -> Maybe (EvTerm, Ct)
 solveGDP ct = case classifyCt ct of
-  EqPred NomEq lhs rhs -> (, ct) <$> gdpEv lhs rhs
+  EqPred NomEq lhs rhs -> gdpEv lhs rhs <&> \co -> (evCoercion co, ct)
   _                    -> Nothing
 
 
-gdpEv :: Type -> Type -> Maybe EvTerm
-gdpEv = Just ... mkPluginUnivEvTerm "GDP Evidence" Nominal []
+gdpEv :: Type -> Type -> Maybe Coercion
+gdpEv = Just ... mkPluginUnivCo "GDP Evidence" Nominal []
 
 
 pprCt :: Ct -> SDoc
