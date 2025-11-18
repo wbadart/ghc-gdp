@@ -5,7 +5,7 @@ module GHC.GDP (plugin) where
 
 import qualified GHC.Plugins as GHC
 import GHC.TcPlugin.API
-import GHC.Tc.Types.Constraint
+import GHC.Tc.Types.Constraint hiding (isGiven, isWanted)
 
 
 plugin :: GHC.Plugin
@@ -36,7 +36,7 @@ solve :: State -> [Ct] -> [Ct] -> TcPluginM 'Solve TcPluginSolveResult
 solve _ givens wanteds = do
   tcPluginTrace "----- SOLVING -----" GHC.empty
   tcPluginTrace "----- GIVENS  -----" (ppr givens)
-  tcPluginTrace "----- WANTEDS -----" (ppr $ head wanteds)
+  tcPluginTrace "----- WANTEDS -----" (ppr wanteds)
   tcPluginTrace "Wanted detail:" (pprCt $ head wanteds)
   let
     solved =
@@ -50,10 +50,11 @@ pprCt = \case
   CEqCan{} -> GHC.text "CEqCan"
   CDictCan{} -> GHC.text "CDictCan"
 
-  CIrredCan{cc_ev=ev, cc_reason=reason} ->
+  ct@CIrredCan{cc_ev=ev, cc_reason=reason} ->
     GHC.text "IrredCt"
-    GHC.$$ (GHC.text "ev" GHC.<+> ppr ev)
+    GHC.$$ (GHC.text "ev    " GHC.<+> ppr ev)
     GHC.$$ (GHC.text "reason" GHC.<+> ppr reason)
+    GHC.$$ (GHC.text "extra " GHC.<+> ppr (ctOrigin ct))
 
   CQuantCan{} -> GHC.text "QCInst"
   CNonCanonical{} -> GHC.text "CtEvidence"
