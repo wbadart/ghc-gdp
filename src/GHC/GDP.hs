@@ -1,11 +1,10 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE LambdaCase #-}
 
 module GHC.GDP (plugin) where
 
-import qualified GHC.Plugins as GHC
 import GHC.TcPlugin.API
-import GHC.Tc.Types.Constraint hiding (isGiven, isWanted)
+import GHC.Plugins (($$), (<+>))
+import qualified GHC.Plugins as GHC
 
 
 plugin :: GHC.Plugin
@@ -46,18 +45,15 @@ solve _ givens wanteds = do
   pure $ TcPluginOk solved new
 
 pprCt :: Ct -> SDoc
-pprCt = \case
-  CEqCan{} -> GHC.text "CEqCan"
-  CDictCan{} -> GHC.text "CDictCan"
-
-  ct@CIrredCan{cc_ev=ev, cc_reason=reason} ->
-    GHC.text "IrredCt"
-    GHC.$$ (GHC.text "ev    " GHC.<+> ppr ev)
-    GHC.$$ (GHC.text "reason" GHC.<+> ppr reason)
-    GHC.$$ (GHC.text "extra " GHC.<+> ppr (ctOrigin ct))
-
-  CQuantCan{} -> GHC.text "QCInst"
-  CNonCanonical{} -> GHC.text "CtEvidence"
+pprCt ct = case classifyPredType (ctPred ct) of
+  ClassPred{} -> GHC.text "ClassPred"
+  EqPred role lhs rhs ->
+    GHC.text "EqPred"
+    $$ (GHC.text "role" <+> ppr role)
+    $$ (GHC.text "lhs " <+> ppr lhs)
+    $$ (GHC.text "rhs " <+> ppr rhs)
+  IrredPred{} -> GHC.text "IrredPred"
+  ForAllPred{} -> GHC.text "ForAllPred"
 
 
 -- Type family rewriting
