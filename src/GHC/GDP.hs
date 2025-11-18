@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TupleSections #-}
 
 module GHC.GDP (plugin) where
 
@@ -48,12 +49,12 @@ solve _ givens wanteds = do
 
 solveGDP :: Ct -> Maybe (EvTerm, Ct)
 solveGDP ct = case classifyCt ct of
-  EqPred NomEq lhs rhs -> Just (gdpEv lhs rhs, ct)
-  _ -> Nothing
+  EqPred NomEq lhs rhs -> (, ct) <$> gdpEv lhs rhs
+  _                    -> Nothing
 
 
-gdpEv :: Type -> Type -> EvTerm
-gdpEv = mkPluginUnivEvTerm "GDP Evidence" Nominal []
+gdpEv :: Type -> Type -> Maybe EvTerm
+gdpEv = Just ... mkPluginUnivEvTerm "GDP Evidence" Nominal []
 
 
 pprCt :: Ct -> SDoc
@@ -77,3 +78,10 @@ classifyCt = classifyPredType . ctPred
 
 rewrite :: State -> UniqFM TyCon TcPluginRewriter
 rewrite _ = emptyUFM
+
+
+-- Helpers
+-- ==========
+
+(...) :: (c -> r) -> (a -> b -> c) -> a -> b -> r
+(...) = (.) . (.)
