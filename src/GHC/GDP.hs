@@ -2,6 +2,8 @@
 
 module GHC.GDP (plugin) where
 
+import Data.List (foldl')
+import Data.Maybe (mapMaybe)
 import GHC.TcPlugin.API
 import GHC.Plugins (($$), (<+>))
 import qualified GHC.Plugins as GHC
@@ -16,8 +18,8 @@ plugin = GHC.defaultPlugin
 
 -- ==========
 
-
 type State = ()
+
 
 tcPlugin :: [String] -> GHC.TcPlugin.API.TcPlugin
 tcPlugin _args = TcPlugin
@@ -31,23 +33,31 @@ tcPlugin _args = TcPlugin
 -- Constraint solving
 -- ==========
 
+
 solve :: State -> [Ct] -> [Ct] -> TcPluginM 'Solve TcPluginSolveResult
 solve _ givens wanteds = do
   tcPluginTrace "----- SOLVING -----" GHC.empty
-  tcPluginTrace "----- GIVENS  -----" (ppr givens)
-  tcPluginTrace "----- WANTEDS -----" (ppr wanteds)
-
-  let wanted = head wanteds
-  tcPluginTrace "Wanted detail:" (pprCt wanted)
+  tcPluginTrace "----- GIVENS  -----" (GHC.text "\n" <+> ppr givens)
+  tcPluginTrace "----- WANTEDS -----" $
+    foldl' (\doc ct -> doc $$ (pprCt ct $$ GHC.text "----------")) GHC.empty wanteds
   let
-    solved =
-      [ (uncurry (mkPluginUnivEvTerm "GDP TERM" Nominal []) (unsafeOperands wanted), wanted)
-      ]
-    new = []
-  pure $ TcPluginOk solved new
+    solved = mapMaybe solveGDP wanteds
+    new    = []
+  pure (TcPluginOk solved new)
+
+
+solveGDP :: Ct -> Maybe (EvTerm, Ct)
+solveGDP ct = case classifyCt ct of
+  EqPred NomEq lhs rhs -> Just (gdpEv lhs rhs, ct)
+  _ -> Nothing
+
+
+gdpEv :: Type -> Type -> EvTerm
+gdpEv = mkPluginUnivEvTerm "GDP Evidence" Nominal []
+
 
 pprCt :: Ct -> SDoc
-pprCt ct = case classifyPredType (ctPred ct) of
+pprCt ct = case classifyCt ct of
   ClassPred{} -> GHC.text "ClassPred"
   EqPred role lhs rhs ->
     GHC.text "EqPred"
@@ -57,10 +67,9 @@ pprCt ct = case classifyPredType (ctPred ct) of
   IrredPred{} -> GHC.text "IrredPred"
   ForAllPred{} -> GHC.text "ForAllPred"
 
-unsafeOperands :: Ct -> (Type, Type)
-unsafeOperands ct = case classifyPredType (ctPred ct) of
-  EqPred NomEq lhs rhs -> (lhs, rhs)
-  _ -> error "not a nominal equality"
+
+classifyCt :: Ct -> Pred
+classifyCt = classifyPredType . ctPred
 
 
 -- Type family rewriting

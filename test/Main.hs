@@ -14,15 +14,20 @@ of `That`.
  -}
 
 main :: IO ()
-main = print $ needsThat proof
+main = do
+  print $ needsThat proof1
+  print $ needsThat proof2
 
 -- ==========
 
 data This
 data That
 
-proof :: Proof (This && That)
-proof = axiom
+proof1 :: Proof (This && That)
+proof1 = axiom
+
+proof2 :: Proof (That && This)
+proof2 = axiom
 
 needsThat :: Proof That -> ()
 needsThat _ = ()
