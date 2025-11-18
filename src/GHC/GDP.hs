@@ -1,19 +1,22 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
 
 module GHC.GDP (plugin) where
 
-import qualified GHC.Plugins
-import GHC.Utils.Outputable (($$))
+import qualified GHC.Plugins as GHC
 import GHC.TcPlugin.API
+import GHC.Tc.Types.Constraint
 
 
-plugin :: GHC.Plugins.Plugin
-plugin = GHC.Plugins.defaultPlugin
-  { GHC.Plugins.tcPlugin = Just . mkTcPlugin . tcPlugin
-  , GHC.Plugins.pluginRecompile = GHC.Plugins.purePlugin
+plugin :: GHC.Plugin
+plugin = GHC.defaultPlugin
+  { GHC.tcPlugin = Just . mkTcPlugin . tcPlugin
+  , GHC.pluginRecompile = GHC.purePlugin
   }
 
+
 -- ==========
+
 
 type State = ()
 
@@ -25,10 +28,39 @@ tcPlugin _args = TcPlugin
   , tcPluginStop = \_ -> pure ()
   }
 
+
+-- Constraint solving
+-- ==========
+
 solve :: State -> [Ct] -> [Ct] -> TcPluginM 'Solve TcPluginSolveResult
-solve () givens wanteds = do
-  tcPluginTrace "----- SOLVING -----" (ppr givens $$ ppr wanteds)
-  pure $ TcPluginOk [] []
+solve _ givens wanteds = do
+  tcPluginTrace "----- SOLVING -----" GHC.empty
+  tcPluginTrace "----- GIVENS  -----" (ppr givens)
+  tcPluginTrace "----- WANTEDS -----" (ppr $ head wanteds)
+  tcPluginTrace "Wanted detail:" (pprCt $ head wanteds)
+  let
+    solved =
+      [ (mkPluginUnivEvTerm "GDP TERM" Nominal [] (error "lhs") (error "rhs"), head wanteds)
+      ]
+    new = []
+  pure $ TcPluginOk solved new
+
+pprCt :: Ct -> SDoc
+pprCt = \case
+  CEqCan{} -> GHC.text "CEqCan"
+  CDictCan{} -> GHC.text "CDictCan"
+
+  CIrredCan{cc_ev=ev, cc_reason=reason} ->
+    GHC.text "IrredCt"
+    GHC.$$ (GHC.text "ev" GHC.<+> ppr ev)
+    GHC.$$ (GHC.text "reason" GHC.<+> ppr reason)
+
+  CQuantCan{} -> GHC.text "QCInst"
+  CNonCanonical{} -> GHC.text "CtEvidence"
+
+
+-- Type family rewriting
+-- ==========
 
 rewrite :: State -> UniqFM TyCon TcPluginRewriter
-rewrite () = emptyUFM
+rewrite _ = emptyUFM
