@@ -8,6 +8,8 @@ import GHC.TcPlugin.API
 import GHC.Plugins (($$), (<+>))
 import qualified GHC.Plugins as GHC
 
+import Debug.Trace
+
 
 gdpEv :: State -> Type -> Type -> Maybe Coercion
 gdpEv state lhs rhs
@@ -19,17 +21,19 @@ gdpEv state lhs rhs
 
 -- | Determine whether lhs implies rhs
 solve :: State -> Type -> Type -> Bool
-solve State{gdpAnd, gdpOr, gdpNot} lhs rhs =
-  case splitTyConApp_maybe lhs of
+solve state@State{gdpAnd, gdpOr, gdpNot} lhs rhs =
+  let decomp = splitTyConApp_maybe lhs
+  in case traceShow (GHC.showPprUnsafe decomp) decomp of
     Just (tyCon, [_, _, lhs', rhs'])
-      | tyCon == gdpAnd -> eqType lhs' rhs || eqType rhs' rhs
-      | tyCon == gdpOr  -> eqType lhs' rhs && eqType rhs' rhs
+      | tyCon == gdpAnd -> solve state lhs' rhs || solve state rhs' rhs
+      | tyCon == gdpOr  -> solve state lhs' rhs && solve state rhs' rhs
 
-    Just (tyCon, _p)
+    Just (tyCon, [_, _p])
       | tyCon == gdpNot -> undefined
 
-    Nothing -> lhs `eqType` rhs
-    _       -> False
+    Just (lhs', []) -> mkTyConTy lhs' `eqType` rhs
+    Nothing         -> lhs `eqType` rhs
+    _               -> False
 
 
 -- Helpers
