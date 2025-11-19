@@ -1,7 +1,5 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE TupleSections #-}
 
 module GHC.GDP (plugin) where
 
@@ -12,6 +10,7 @@ import GHC.TcPlugin.API
 import GHC.Plugins (($$), (<+>))
 import qualified GHC.Plugins as GHC
 
+import GHC.Logic
 import Logic.Propositional (And, Or, Not)
 
 
@@ -29,21 +28,6 @@ tcPlugin _args = TcPlugin
   , tcPluginInit = initPlugin
   , tcPluginStop = \_ -> pure ()
   }
-
-
-data State = State
-  { gdpAnd :: TyCon
-  , gdpOr  :: TyCon
-  , gdpNot :: TyCon
-  }
-
-
-instance Outputable State where
-  ppr State{gdpAnd, gdpOr, gdpNot} =
-    GHC.empty
-    $$ (GHC.text "AND:" <+> ppr gdpAnd)
-    $$ (GHC.text "OR: " <+> ppr gdpOr)
-    $$ (GHC.text "NOT:" <+> ppr gdpNot)
 
 
 initPlugin :: TcPluginM 'Init State
@@ -64,19 +48,15 @@ solve state givens wanteds = do
   tcPluginTrace "----- WANTEDS -----" $
     foldl' (\doc ct -> doc $$ (pprCt ct $$ GHC.text "----------")) GHC.empty wanteds
   let
-    solved = mapMaybe solveGDP wanteds
+    solved = mapMaybe (solveGDP state) wanteds
     new    = []
   pure (TcPluginOk solved new)
 
 
-solveGDP :: Ct -> Maybe (EvTerm, Ct)
-solveGDP ct = case classifyCt ct of
-  EqPred NomEq lhs rhs -> gdpEv lhs rhs <&> \co -> (evCoercion co, ct)
+solveGDP :: State -> Ct -> Maybe (EvTerm, Ct)
+solveGDP state ct = case classifyCt ct of
+  EqPred NomEq lhs rhs -> gdpEv state lhs rhs <&> \co -> (evCoercion co, ct)
   _                    -> Nothing
-
-
-gdpEv :: Type -> Type -> Maybe Coercion
-gdpEv = Just ... mkPluginUnivCo "GDP Evidence" Nominal []
 
 
 pprCt :: Ct -> SDoc
@@ -100,10 +80,3 @@ classifyCt = classifyPredType . ctPred
 
 rewrite :: State -> UniqFM TyCon TcPluginRewriter
 rewrite _ = emptyUFM
-
-
--- Helpers
--- ==========
-
-(...) :: (c -> r) -> (a -> b -> c) -> a -> b -> r
-(...) = (.) . (.)

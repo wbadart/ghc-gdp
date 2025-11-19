@@ -17,7 +17,7 @@ main :: IO ()
 main = do
   print $ needsThat proof1
   print $ needsThat proof2
-  print $ needsThat notProof1
+  -- print $ needsThat notProof1
   print $ needsThat notProof2
 
 -- ==========

@@ -18,7 +18,7 @@ common warnings
 library
     import:           warnings
     exposed-modules:  GHC.GDP
-    -- other-modules:
+    other-modules:    GHC.Logic
     -- other-extensions:
     build-depends:    base ^>=4.18.2.1
                       , ghc ^>= 9.6
