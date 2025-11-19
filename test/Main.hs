@@ -35,7 +35,7 @@ proof2 = axiom
 notProof1 :: Proof TheOther
 notProof1 = axiom
 
-notProof2 :: Proof (This || That)
+notProof2 :: Proof (That || That)
 notProof2 = axiom
 
 needsThat :: Proof That -> ()

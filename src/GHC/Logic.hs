@@ -21,11 +21,15 @@ gdpEv state lhs rhs
 solve :: State -> Type -> Type -> Bool
 solve State{gdpAnd, gdpOr, gdpNot} lhs rhs =
   case splitTyConApp_maybe lhs of
-    Just (tyCon, [_, _, lhs', rhs']) | tyCon == gdpAnd -> eqType lhs' rhs || eqType rhs' rhs
-                                     | tyCon == gdpOr  -> False
-    Just (tyCon, _p)                 | tyCon == gdpNot -> undefined
+    Just (tyCon, [_, _, lhs', rhs'])
+      | tyCon == gdpAnd -> eqType lhs' rhs || eqType rhs' rhs
+      | tyCon == gdpOr  -> eqType lhs' rhs && eqType rhs' rhs
+
+    Just (tyCon, _p)
+      | tyCon == gdpNot -> undefined
+
     Nothing -> lhs `eqType` rhs
-    _ -> False
+    _       -> False
 
 
 -- Helpers
