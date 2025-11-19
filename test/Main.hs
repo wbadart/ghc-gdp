@@ -6,18 +6,20 @@ module Main (main) where
 import Logic.Proof
 import Logic.Propositional
 
-{-
-This tests whether the plugin's goal is met: to allow proof of a proposition to be used
-in place of a proof that it entails. In this case, we have a proof of `This && That`,
-which, naturally, entails `That`, which we try to provide to a function expecting proof
-of `That`.
- -}
+{----
+ - The "test" of this test suite is simply whether or not the module compiles with the
+ - negative tests (notProofN) commented out.
+ -
+ - The proofN cases have types I expect to be reducible to the proof type required by
+ - needsX. The notProofN cases I do _not_ expect to be reducible to the needsX type.
+ ----}
 
 main :: IO ()
 main = do
   print $ needsThat proof1
   print $ needsThat proof2
-  -- print $ needsThat notProof1
+  print $ needsThat proof3
+  print $ needsThat notProof1
   print $ needsThat notProof2
 
 -- ==========
@@ -32,10 +34,13 @@ proof1 = axiom
 proof2 :: Proof (That && This)
 proof2 = axiom
 
+proof3 :: Proof (That || That)
+proof3 = axiom
+
 notProof1 :: Proof TheOther
 notProof1 = axiom
 
-notProof2 :: Proof (That || That)
+notProof2 :: Proof (This || That)
 notProof2 = axiom
 
 needsThat :: Proof That -> ()
